@@ -55,6 +55,19 @@ let
         type = types.listOf nonEmptyStr;
       };
 
+      depends = mkOption {
+        default = [ ];
+        example = [ "/persist" ];
+        type = types.listOf nonEmptyStr;
+        description = ''
+          List of paths that should be mounted before this one. Note that you do
+          not need to add the value of .device or .mountPoint to this list.
+
+          If a path is added to this list, any other filesystem whose mount point is
+          a parent of the path will be mounted before this filesystem.
+        '';
+      };
+
     };
 
     config = {
