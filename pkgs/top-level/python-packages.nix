@@ -2683,6 +2683,8 @@ in {
 
   etesync = callPackage ../development/python-modules/etesync { };
 
+  eth-account = callPackage ../development/python-modules/eth-account { };
+
   eth-hash = callPackage ../development/python-modules/eth-hash { };
 
   eth-typing = callPackage ../development/python-modules/eth-typing { };
@@ -3739,6 +3741,8 @@ in {
   hetzner = callPackage ../development/python-modules/hetzner { };
 
   heudiconv = callPackage ../development/python-modules/heudiconv { };
+
+  hexbytes = callPackage ../development/python-modules/hexbytes { };
 
   hg-commitsigs = callPackage ../development/python-modules/hg-commitsigs { };
 
@@ -10608,6 +10612,8 @@ in {
   webassets = callPackage ../development/python-modules/webassets { };
 
   web = callPackage ../development/python-modules/web { };
+
+  web3 = callPackage ../development/python-modules/web3 { };
 
   web-cache = callPackage ../development/python-modules/web-cache { };
 
