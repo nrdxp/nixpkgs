@@ -10,13 +10,36 @@
 , pyqt6_sip
 , pyqt-builder
 , qt6Packages
+, symlinkJoin
 , withConnectivity ? false
 , withMultimedia ? false
 , withWebSockets ? false
 , withLocation ? false
 }:
+let
+  # FIXME: qmake isn't built with the proper flags to point it at the various outputs qtbase produces;
+  # hack around this by joining the outputs together, and making actual copies, since qmake apparently
+  # doesn't like symlinks
+  qtbase' = with qt6Packages.qtbase;
+    (symlinkJoin {
+      inherit name;
+      paths = [out dev];
+    })
+    .overrideAttrs (o: {
+      buildCommand = builtins.concatStringsSep "\n" [
+        o.buildCommand
+        ''
+         ( TMPLINKS=$(mktemp -u)
+            trap "rm -rf $TMPLINKS" EXIT
 
-buildPythonPackage rec {
+            mv $out $TMPLINKS
+
+            cp --reflink=auto -rL $TMPLINKS $out
+         )
+        ''
+      ];
+    });
+in buildPythonPackage rec {
   pname = "PyQt6";
   version = "6.3.0";
   format = "pyproject";
@@ -36,7 +59,7 @@ buildPythonPackage rec {
     pkg-config
     lndir
     sip
-    qtbase
+    qtbase'
     qtsvg
     qtdeclarative
     qtwebchannel
@@ -48,7 +71,7 @@ buildPythonPackage rec {
 
   buildInputs = with qt6Packages; [
     dbus
-    qtbase
+    qtbase'
     qtsvg
     qtdeclarative
     pyqt-builder
