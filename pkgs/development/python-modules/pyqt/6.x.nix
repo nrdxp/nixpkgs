@@ -1,5 +1,6 @@
 { lib
 , buildPythonPackage
+, python
 , isPy27
 , fetchPypi
 , pkg-config
@@ -11,6 +12,7 @@
 , pyqt-builder
 , qt6Packages
 , symlinkJoin
+, makeWrapper
 , withConnectivity ? false
 , withMultimedia ? false
 , withWebSockets ? false
@@ -20,11 +22,20 @@ let
   # FIXME: qmake isn't built with the proper flags to point it at the various outputs qtbase produces;
   # hack around this by joining the outputs together, and making actual copies, since qmake apparently
   # doesn't like symlinks
-  qtbase' = with qt6Packages.qtbase;
+  qt6Libs = with qt6Packages;
     (symlinkJoin {
-      inherit name;
-      paths = [out dev];
-    })
+      name = "qt6-libs";
+      paths = lib.flatten (map (x: [x.out x.dev]) [
+        qtbase
+        qtdeclarative
+        qtsvg
+        qtwebchannel
+      ]
+        ++ lib.optional withConnectivity qtconnectivity
+        ++ lib.optional withMultimedia qtmultimedia
+        ++ lib.optional withWebSockets qtwebsockets
+        ++ lib.optional withLocation qtpositioning
+    );})
     .overrideAttrs (o: {
       buildCommand = builtins.concatStringsSep "\n" [
         o.buildCommand
@@ -39,6 +50,9 @@ let
         ''
       ];
     });
+
+    out = placeholder "out";
+
 in buildPythonPackage rec {
   pname = "PyQt6";
   version = "6.3.0";
@@ -59,26 +73,15 @@ in buildPythonPackage rec {
     pkg-config
     lndir
     sip
-    qtbase'
-    qtsvg
-    qtdeclarative
-    qtwebchannel
-  ]
-    ++ lib.optional withConnectivity qtconnectivity
-    ++ lib.optional withMultimedia qtmultimedia
-    ++ lib.optional withWebSockets qtwebsockets
-    ++ lib.optional withLocation qtpositioning;
+    qt6Libs
+    makeWrapper
+  ];
 
   buildInputs = with qt6Packages; [
     dbus
-    qtbase'
-    qtsvg
-    qtdeclarative
+    qt6Libs
     pyqt-builder
-  ]
-    ++ lib.optional withConnectivity qtconnectivity
-    ++ lib.optional withWebSockets qtwebsockets
-    ++ lib.optional withLocation qtpositioning;
+  ];
 
   propagatedBuildInputs = [
     dbus-python
@@ -86,6 +89,8 @@ in buildPythonPackage rec {
   ];
 
   patches = [
+    # TODO: contribute upstream
+    ./pyqt6-fix-find-dbus-python.patch
   ];
 
   passthru = {
@@ -94,10 +99,42 @@ in buildPythonPackage rec {
     WebSocketsEnabled = withWebSockets;
   };
 
-  dontConfigure = true;
+  configurePhase = ''
+    runHook preConfigure
+
+    export PYTHONPATH=$PYTHONPATH:${out}/lib/${python.libPrefix}/site-packages
+
+    sip-build --no-make \
+     --confirm-license \
+     --build-dir=dist \
+     --target-dir=${out}/lib/${python.libPrefix}/site-packages \
+     --scripts-dir=${out}/bin \
+     --no-qml-plugin
+
+    runHook postConfigure
+  '';
 
   # Checked using pythonImportsCheck
   doCheck = false;
+
+  buildPhase = ''
+    cd dist
+    make -j "$NIX_BUILD_CORES"
+  '';
+
+  installPhase = ''
+    runHook preInstall
+
+    make install -j "$NIX_BUILD_CORES"
+
+    runHook postInstall
+  '';
+
+  postInstall = ''
+    for i in ${out}/bin/*; do
+      wrapProgram $i --prefix PYTHONPATH : "$PYTHONPATH"
+    done
+  '';
 
   pythonImportsCheck = [
     "PyQt6"
