@@ -44,6 +44,10 @@ let
 
       inherit callPackage qtModule srcs;
 
+      mkDerivationWith =
+        import ./mkDerivation.nix
+        { inherit lib; inherit debug; inherit (self) wrapQtAppsHook; };
+
       qtbase = callPackage ./modules/qtbase.nix {
         withGtk3 = true;
         inherit (srcs.qtbase) src version;
@@ -84,7 +88,8 @@ let
       qtwebview = callPackage ./modules/qtwebview.nix { };
 
       wrapQtAppsHook = makeSetupHook {
-          deps = [ makeWrapper ];
+          deps = [ self.qtbase.dev makeWrapper ]
+            ++ lib.optional stdenv.isLinux self.qtwayland.dev;
         } ./hooks/wrap-qt-apps-hook.sh;
     };
 

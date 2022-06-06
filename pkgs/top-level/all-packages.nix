@@ -29327,7 +29327,7 @@ with pkgs;
 
   quodlibet-xine-full = quodlibet-full.override { xineBackend = true; tag = "-xine-full"; };
 
-  qutebrowser = libsForQt5.callPackage ../applications/networking/browsers/qutebrowser { };
+  qutebrowser = qt6Packages.callPackage ../applications/networking/browsers/qutebrowser { };
 
   qxw = callPackage ../applications/editors/qxw {};
 
