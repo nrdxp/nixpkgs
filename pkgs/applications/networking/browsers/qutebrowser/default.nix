@@ -1,4 +1,4 @@
-{ stdenv, lib, fetchurl, fetchzip, python3
+{ stdenv, lib, fetchurl, fetchzip, python3, fetchFromGitHub
 , mkDerivationWith, wrapQtAppsHook, wrapGAppsHook, qtbase, qtwebengine, glib-networking
 , asciidoc, docbook_xml_dtd_45, docbook_xsl, libxml2
 , libxslt, gst_all_1 ? null
@@ -7,9 +7,12 @@
 , backend            ? "webengine"
 , pipewireSupport    ? stdenv.isLinux
 , pipewire_0_2
+, qtwayland ? null
+, fd
 }:
 
 assert withMediaPlayback -> gst_all_1 != null;
+assert stdenv.isLinux -> qtwayland != null;
 
 let
   python3Packages = python3.pkgs;
@@ -23,7 +26,7 @@ let
   };
 
   backendPackage =
-   if backend == "webengine" then python3Packages.pyqtwebengine else
+   if backend == "webengine" then python3Packages.pyqt6.pyqtwebengine else
    if backend == "webkit"    then python3Packages.pyqt5_with_qtwebkit else
    throw ''
      Unknown qutebrowser backend "${backend}".
@@ -35,9 +38,11 @@ in mkDerivationWith python3Packages.buildPythonApplication rec {
   version = "2.5.2";
 
   # the release tarballs are different from the git checkout!
-  src = fetchurl {
-    url = "https://github.com/qutebrowser/qutebrowser/releases/download/v${version}/${pname}-${version}.tar.gz";
-    hash = "sha256-qb/OFN3EA94N6y7t+YPCMc4APgdZmV7H706jTkl06Qg=";
+  src = fetchFromGitHub {
+    owner = "qutebrowser";
+    repo = "qutebrowser";
+    rev = "qt6-v2";
+    hash = "sha256-+OEOBn+1GV1kCelJU++q0AbkGgRGSmW7imX3PLqZthQ=";
   };
 
   # Needs tox
@@ -49,9 +54,10 @@ in mkDerivationWith python3Packages.buildPythonApplication rec {
   ] ++ lib.optionals withMediaPlayback (with gst_all_1; [
     gst-plugins-base gst-plugins-good
     gst-plugins-bad gst-plugins-ugly gst-libav
-  ]);
+  ]) ++ lib.optional stdenv.isLinux qtwayland;
 
   nativeBuildInputs = [
+    fd
     wrapQtAppsHook wrapGAppsHook asciidoc
     docbook_xml_dtd_45 docbook_xsl libxml2 libxslt
   ];
@@ -94,15 +100,16 @@ in mkDerivationWith python3Packages.buildPythonApplication rec {
 
     # Install icons
     for i in 16 24 32 48 64 128 256 512; do
-        install -Dm644 "icons/qutebrowser-''${i}x''${i}.png" \
+        install -Dm644 "build/lib/qutebrowser/icons/qutebrowser-''${i}x''${i}.png" \
             "$out/share/icons/hicolor/''${i}x''${i}/apps/qutebrowser.png"
     done
-    install -Dm644 icons/qutebrowser.svg \
+    install -Dm644 build/lib/qutebrowser/icons/qutebrowser.svg \
         "$out/share/icons/hicolor/scalable/apps/qutebrowser.svg"
 
     # Install scripts
     sed -i "s,/usr/bin/,$out/bin/,g" scripts/open_url_in_instance.sh
-    install -Dm755 -t "$out/share/qutebrowser/scripts/" $(find scripts -type f)
+    rm -rf scripts/dev
+    install -Dm755 -t "$out/share/qutebrowser/scripts/" $(fd -t x . scripts)
     install -Dm755 -t "$out/share/qutebrowser/userscripts/" misc/userscripts/*
 
     # Patch python scripts
