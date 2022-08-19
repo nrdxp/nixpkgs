@@ -163,6 +163,7 @@
   ./programs/freetds.nix
   ./programs/fuse.nix
   ./programs/gamemode.nix
+  ./programs/gamescope.nix
   ./programs/geary.nix
   ./programs/git.nix
   ./programs/gnome-disks.nix

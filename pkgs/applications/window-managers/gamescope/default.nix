@@ -23,6 +23,7 @@
 , libliftoff
 , lib
 , makeBinaryWrapper
+, extraWrapperArgs ? []
 }:
 let
   pname = "gamescope";
@@ -78,7 +79,8 @@ stdenv.mkDerivation {
   # --debug-layers flag expects these in the path
   postInstall = ''
     wrapProgram "$out/bin/gamescope" \
-     --prefix PATH : ${with xorg; lib.makeBinPath [xprop xwininfo]}
+     --prefix PATH : ${with xorg; lib.makeBinPath [xprop xwininfo]} \
+     ${toString extraWrapperArgs}
   '';
 
   meta = with lib; {
