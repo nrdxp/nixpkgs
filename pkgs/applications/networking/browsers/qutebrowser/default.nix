@@ -130,6 +130,8 @@ buildPythonApplication {
       --unset QT_PLUGIN_PATH
       "''${qtWrapperArgs[@]}"
       --add-flags '--backend webengine'
+      # avoid persistant warning on starup
+      --set-default QT_STYLE_OVERRIDE Fusion
       --set QUTE_QTWEBENGINE_VERSION_OVERRIDE "${lib.getVersion qtwebengine}"
       ${lib.optionalString (enableVulkan && isQt6) ''
         --prefix LD_LIBRARY_PATH : ${lib.makeLibraryPath [vulkan-loader]}
