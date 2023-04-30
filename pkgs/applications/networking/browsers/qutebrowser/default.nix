@@ -126,6 +126,8 @@ buildPythonApplication {
   in
     ''
     makeWrapperArgs+=(
+      # exclusively use values from wrapper
+      --unset QT_PLUGIN_PATH
       "''${qtWrapperArgs[@]}"
       --add-flags '--backend webengine'
       --set QUTE_QTWEBENGINE_VERSION_OVERRIDE "${lib.getVersion qtwebengine}"
